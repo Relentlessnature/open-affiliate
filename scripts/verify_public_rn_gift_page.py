@@ -36,6 +36,38 @@ visible=unescape(re.sub(r"<[^>]+>"," ",re.sub(r"<(script|style)[^>]*>.*?</\1>","
 pattern=re.compile(r"\b\d{1,6}\s+(?:[A-Za-z.-]+\s+){1,5}(?:Street|Road|Lane|Avenue|Drive|Boulevard|Court|Terrace|Way|Place)\b",re.I)
 assert not pattern.search(visible), "Possible street address in public page"
 print("ANONYMOUS HTML CHECK PASS",json.dumps({"http":status,"page":finalurl,"download_links":len(links.urls),"manifest_files":len(manifest),"preview_images":len(links.images),"privacy_pattern":"pass"}))
+# Download and open the actual public ZIP (not a local copy or session attachment).
+from zipfile import ZipFile
+from io import BytesIO
+from pypdf import PdfReader
+from PIL import Image
+request=Request(ZIP_URL, headers={"User-Agent":"Mozilla/5.0 (RN Public Gift Verification)"})
+with urlopen(request,timeout=120) as res:
+    bundle_bytes=res.read()
+with ZipFile(BytesIO(bundle_bytes)) as collection:
+    assert collection.testzip() is None, "Public ZIP failed CRC"
+    names=collection.namelist()
+    assert len(names)==23, ("Incomplete archive",len(names))
+    assert any("Six_Step_Method_Guide.pdf" in n for n in names)
+    assert any("Seven_Day_Clarity_Challenge.pdf" in n for n in names)
+    assert all(any(n.startswith(prefix) for n in names) for prefix in [
+        "03_Everyday_Support_Pack/01_When_You_Dont_Know_What_to_Say/",
+        "03_Everyday_Support_Pack/02_Pass_Something_Good_Along/",
+        "03_Everyday_Support_Pack/03_A_Small_Place_to_Begin_Again/",
+        "03_Everyday_Support_Pack/04_Take_a_Moment/"])
+    safe_text=collection.read("README_FIRST.txt").decode("utf-8")
+    for name in names:
+        data=collection.read(name)
+        if name.endswith(".pdf"):
+            doc=PdfReader(BytesIO(data))
+            assert len(doc.pages)>0
+            safe_text += "\\n" + "\\n".join(p.extract_text() or "" for p in doc.pages)
+        if name.endswith(".png"):
+            with Image.open(BytesIO(data)) as img: img.verify()
+    assert not pattern.search(safe_text), "Potential street address inside ZIP"
+    assert "PAUSE" in safe_text.upper(), "Approved Pause step missing"
+    print("COMPLETE ZIP PASS",json.dumps({"bytes":len(bundle_bytes),"entries":len(names),"pdfs":sum(n.endswith(".pdf") for n in names),"pngs":sum(n.endswith(".png") for n in names),"privacy_pattern":"pass","crc":"pass"}))
+
 # Browser test of desktop & mobile responsive rendering.
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
