@@ -1,0 +1,27 @@
+name: Package public Relentless Nature gift collection
+
+on:
+  push:
+    paths:
+      - ".github/workflows/build-rn-free-gifts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public affiliate repository
+        uses: actions/checkout@v4
+      - name: Fetch and validate public RN gift files, create ZIP
+        run: python3 scripts/build_public_rn_gifts.py
+      - name: Publish stable public gift ZIP
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create free-gifts-2026-10-19 RN_Complete_Free_Gift_Collection.zip \
+            --title "Relentless Nature - Free Gift Collection (October 2026)" \
+            --notes "Approved free-to-share educational gifts. No signup or purchase required. Includes the six-step method, the 7-Day Clarity Challenge, and all four Everyday Support Pack gifts." \
+            --latest=false
