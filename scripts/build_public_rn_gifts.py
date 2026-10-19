@@ -143,7 +143,7 @@ with ZipFile(out,"w",ZIP_DEFLATED,compresslevel=6) as z:
             raise RuntimeError("Asset retrieval failed for "+entry["path"]) from last
         if len(data) != entry["size"]:
             raise RuntimeError(f"Asset size mismatch: {entry['path']}: {len(data)} vs {entry['size']}")
-        if entry["path"].endswith(".png") and not data.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+        if entry["path"].endswith(".png") and not data.startswith(b"\x89PNG\r\n\x1a\n"):
             raise RuntimeError("Invalid PNG "+entry["path"])
         if entry["path"].endswith(".pdf") and not data.startswith(b"%PDF-"):
             raise RuntimeError("Invalid PDF "+entry["path"])
