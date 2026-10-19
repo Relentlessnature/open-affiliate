@@ -21,6 +21,7 @@ with urlopen(req,timeout=35) as resp:
 assert status==200 and "free-gifts" in finalurl, (status,finalurl)
 assert "Something useful, freely shared" in html, "Gift heading absent"
 assert "Seven more gifts for everyday life" in html, "Perspective Starter Pack section absent"
+assert "No signup. No purchase." in html, "Free-access statement missing"
 assert "Download all the gifts" in html, "Primary gift button absent"
 assert "post-password-form" not in html, "Page unexpectedly password protected"
 assert "wp-login.php?redirect_to" not in finalurl, "Login redirect"
