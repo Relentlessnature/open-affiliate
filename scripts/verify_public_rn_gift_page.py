@@ -20,11 +20,15 @@ with urlopen(req,timeout=35) as resp:
     html=resp.read().decode("utf-8","replace")
 assert status==200 and "free-gifts" in finalurl, (status,finalurl)
 assert "Something useful, freely shared" in html, "Gift heading absent"
+assert "Seven more gifts for everyday life" in html, "Perspective Starter Pack section absent"
 assert "Download all the gifts" in html, "Primary gift button absent"
 assert "post-password-form" not in html, "Page unexpectedly password protected"
 assert "wp-login.php?redirect_to" not in finalurl, "Login redirect"
 links=Links();links.feed(html)
 assert ZIP_URL in links.urls, "Complete ZIP link missing"
+assert "https://relentless-nature.com/tools/" in links.urls, "Free Tools card missing"
+assert "https://relentless-nature.com/library/" in links.urls, "Library card missing"
+assert "https://relentless-nature.com/affiliate-program/" in links.urls, "Affiliate / Partnership card missing"
 s=Path("scripts/build_public_rn_gifts.py").read_text()
 node=next(node for node in ast.parse(s).body if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=="MANIFEST" for t in node.targets))
 manifest=ast.literal_eval(node.value)
@@ -47,8 +51,9 @@ with urlopen(request,timeout=120) as res:
 with ZipFile(BytesIO(bundle_bytes)) as collection:
     assert collection.testzip() is None, "Public ZIP failed CRC"
     names=collection.namelist()
-    assert len(names)==23, ("Incomplete archive",len(names))
+    assert len(names)==len(manifest)+1, ("Incomplete archive",len(names),"expected",len(manifest)+1)
     assert any("Six_Step_Method_Guide.pdf" in n for n in names)
+    assert sum(n.startswith("04_Perspective_Starter_Pack/") and n.endswith(".pdf") for n in names) == 7, "Seven starter-pack PDFs missing"
     assert any("Seven_Day_Clarity_Challenge.pdf" in n for n in names)
     assert all(any(n.startswith(prefix) for n in names) for prefix in [
         "03_Everyday_Support_Pack/01_When_You_Dont_Know_What_to_Say/",
@@ -61,6 +66,7 @@ with ZipFile(BytesIO(bundle_bytes)) as collection:
         if name.endswith(".pdf"):
             doc=PdfReader(BytesIO(data))
             assert len(doc.pages)>0
+            safe_text += "\\n" + str(doc.metadata or {})
             safe_text += "\\n" + "\\n".join(p.extract_text() or "" for p in doc.pages)
         if name.endswith(".png"):
             with Image.open(BytesIO(data)) as img: img.verify()
@@ -86,8 +92,10 @@ for label,width,height in [("desktop",1440,900),("mobile",390,844)]:
         assert actual["sw"] <= actual["vw"]+8, f"{label} horizontal clipping vw={actual['vw']} sw={actual['sw']}"
         giftlinks=driver.find_elements(By.CSS_SELECTOR, "a[href*='RN_Complete_Free_Gift_Collection.zip']")
         assert any(x.is_displayed() for x in giftlinks), label+" download-all button not visible"
-        buttons=driver.find_elements(By.CSS_SELECTOR, ".wp-block-button__link")
+        buttons=driver.find_elements(By.CSS_SELECTOR, ".rng-button")
         assert len(buttons)>=5, label+" buttons missing"
+        assert driver.find_elements(By.CSS_SELECTOR, ".rng-extras-grid .rng-extra-card"), label+" seven-PDF section missing"
+        assert len(driver.find_elements(By.CSS_SELECTOR, ".rng-extras-grid .rng-extra-card"))==7, label+" expected seven PDF cards"
         Path("qa_screenshots").mkdir(exist_ok=True)
         driver.save_screenshot(f"qa_screenshots/{label}.png")
         print("BROWSER PASS",json.dumps({"viewport":label,"width":actual["vw"],"scroll_width":actual["sw"],"buttons":len(buttons),"zip_visible":True}))
