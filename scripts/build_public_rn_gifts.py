@@ -15,8 +15,8 @@ MANIFEST = [
   },
   {
     "path": "02_Seven_Day_Clarity_Challenge/RN_Seven_Day_Clarity_Challenge.pdf",
-    "url": "https://relentless-nature.com/wp-content/uploads/2026/10/RN_Seven_Day_Clarity_Challenge_Free_Share.pdf",
-    "size": 1598165
+    "url": "https://relentless-nature.com/wp-content/uploads/2026/10/RN_Seven_Day_Clarity_Challenge_Free_Share_v2.pdf",
+    "size": 1485166
   },
   {
     "path": "02_Seven_Day_Clarity_Challenge/RN_Tracker_and_Reflection.pdf",
