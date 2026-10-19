@@ -1,0 +1,29 @@
+name: Verify public RN gift page and download links
+
+on:
+  push:
+    paths:
+      - ".github/workflows/verify-rn-free-gifts.yml"
+      - "scripts/verify_public_rn_gift_page.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  anonymous-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install QA libraries
+        run: python3 -m pip install --quiet selenium pypdf Pillow
+      - name: Test signed-out page, full ZIP, desktop and phone layouts
+        run: python3 scripts/verify_public_rn_gift_page.py
+      - name: Keep screenshots for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rn-free-gifts-qa-screenshots
+          path: qa_screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
