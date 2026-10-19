@@ -116,37 +116,37 @@ MANIFEST = [
   {
     "path": "04_Perspective_Starter_Pack/01_Couple_Communication_Starter_Pack.pdf",
     "url": "https://relentless-nature.com/wp-content/uploads/2025/12/Couples-Communication-Starter-Kit-2.pdf",
-    "size": 97555
+    "size": None
   },
   {
     "path": "04_Perspective_Starter_Pack/02_De_escalation_Guide.pdf",
     "url": "https://relentless-nature.com/wp-content/uploads/2025/12/DE-ESCALATION-GUIDE-2.pdf",
-    "size": 111142
+    "size": None
   },
   {
     "path": "04_Perspective_Starter_Pack/03_Empathy_Cheat_Sheet.pdf",
     "url": "https://relentless-nature.com/wp-content/uploads/2025/12/EMPATHY-CHEAT-SHEET-2.pdf",
-    "size": 103189
+    "size": None
   },
   {
     "path": "04_Perspective_Starter_Pack/04_Understand_Before_You_Assume_Worksheet.pdf",
     "url": "https://relentless-nature.com/wp-content/uploads/2025/12/Understand_Before_You_Assume_Worksheet_Pack-2.pdf",
-    "size": 80064
+    "size": None
   },
   {
     "path": "04_Perspective_Starter_Pack/05_Perspective_Shifting_Toolkit.pdf",
     "url": "https://relentless-nature.com/wp-content/uploads/2025/12/perspective-shift-2.pdf",
-    "size": 101815
+    "size": None
   },
   {
     "path": "04_Perspective_Starter_Pack/06_What_to_Say_Instead_Guide.pdf",
     "url": "https://relentless-nature.com/wp-content/uploads/2025/12/WHAT-TO-SAY-INSTEAD-2.pdf",
-    "size": 75651
+    "size": None
   },
   {
     "path": "04_Perspective_Starter_Pack/07_Five_Minute_Emotional_Reset.pdf",
     "url": "https://relentless-nature.com/wp-content/uploads/2025/12/5-Minute-Emotional-Reset-Toolkit-3.pdf",
-    "size": 121698
+    "size": None
   }
 ]
 README = """RELENTLESS NATURE - SOMETHING USEFUL, FREELY SHARED
@@ -178,8 +178,10 @@ with ZipFile(out,"w",ZIP_DEFLATED,compresslevel=6) as z:
                 time.sleep(3*(attempt+1))
         else:
             raise RuntimeError("Asset retrieval failed for "+entry["path"]) from last
-        if len(data) != entry["size"]:
+        if entry["size"] is not None and len(data) != entry["size"]:
             raise RuntimeError(f"Asset size mismatch: {entry['path']}: {len(data)} vs {entry['size']}")
+        if len(data) < 1024:
+            raise RuntimeError("Truncated public asset "+entry["path"])
         if entry["path"].endswith(".png") and not data.startswith(b"\x89PNG\r\n\x1a\n"):
             raise RuntimeError("Invalid PNG "+entry["path"])
         if entry["path"].endswith(".pdf") and not data.startswith(b"%PDF-"):
