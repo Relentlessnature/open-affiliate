@@ -32,8 +32,8 @@ missing=[p["url"] for p in manifest if p["url"] not in links.urls]
 assert not missing, f"Missing individual download links: {len(missing)}"
 # Broad physical-street-address text check: do not echo any candidate value.
 from html import unescape
-visible=unescape(re.sub(r"<[^>]+>"," ",re.sub(r"<(script|style)[^>]*>.*?</\\1>"," ",html,flags=re.S|re.I)))
-pattern=re.compile(r"\\b\\d{1,6}\\s+(?:[A-Za-z.-]+\\s+){1,5}(?:Street|Road|Lane|Avenue|Drive|Boulevard|Court|Terrace|Way|Place)\\b",re.I)
+visible=unescape(re.sub(r"<[^>]+>"," ",re.sub(r"<(script|style)[^>]*>.*?</\1>"," ",html,flags=re.S|re.I)))
+pattern=re.compile(r"\b\d{1,6}\s+(?:[A-Za-z.-]+\s+){1,5}(?:Street|Road|Lane|Avenue|Drive|Boulevard|Court|Terrace|Way|Place)\b",re.I)
 assert not pattern.search(visible), "Possible street address in public page"
 print("ANONYMOUS HTML CHECK PASS",json.dumps({"http":status,"page":finalurl,"download_links":len(links.urls),"manifest_files":len(manifest),"preview_images":len(links.images),"privacy_pattern":"pass"}))
 # Browser test of desktop & mobile responsive rendering.
