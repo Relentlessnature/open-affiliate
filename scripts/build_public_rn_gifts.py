@@ -112,6 +112,41 @@ MANIFEST = [
     "path": "03_Everyday_Support_Pack/04_Take_a_Moment/Pocket_Cards_PNG/RN_Pocket_03_What_Matters_Here.png",
     "url": "https://relentless-nature.com/wp-content/uploads/2026/10/RN_Pocket_03_What_Matters_Here.png",
     "size": 76713
+  },
+  {
+    "path": "04_Perspective_Starter_Pack/01_Couple_Communication_Starter_Pack.pdf",
+    "url": "https://relentless-nature.com/wp-content/uploads/2025/12/Couples-Communication-Starter-Kit-2.pdf",
+    "size": 97555
+  },
+  {
+    "path": "04_Perspective_Starter_Pack/02_De_escalation_Guide.pdf",
+    "url": "https://relentless-nature.com/wp-content/uploads/2025/12/DE-ESCALATION-GUIDE-2.pdf",
+    "size": 111142
+  },
+  {
+    "path": "04_Perspective_Starter_Pack/03_Empathy_Cheat_Sheet.pdf",
+    "url": "https://relentless-nature.com/wp-content/uploads/2025/12/EMPATHY-CHEAT-SHEET-2.pdf",
+    "size": 103189
+  },
+  {
+    "path": "04_Perspective_Starter_Pack/04_Understand_Before_You_Assume_Worksheet.pdf",
+    "url": "https://relentless-nature.com/wp-content/uploads/2025/12/Understand_Before_You_Assume_Worksheet_Pack-2.pdf",
+    "size": 80064
+  },
+  {
+    "path": "04_Perspective_Starter_Pack/05_Perspective_Shifting_Toolkit.pdf",
+    "url": "https://relentless-nature.com/wp-content/uploads/2025/12/perspective-shift-2.pdf",
+    "size": 101815
+  },
+  {
+    "path": "04_Perspective_Starter_Pack/06_What_to_Say_Instead_Guide.pdf",
+    "url": "https://relentless-nature.com/wp-content/uploads/2025/12/WHAT-TO-SAY-INSTEAD-2.pdf",
+    "size": 75651
+  },
+  {
+    "path": "04_Perspective_Starter_Pack/07_Five_Minute_Emotional_Reset.pdf",
+    "url": "https://relentless-nature.com/wp-content/uploads/2025/12/5-Minute-Emotional-Reset-Toolkit-3.pdf",
+    "size": 121698
   }
 ]
 README = """RELENTLESS NATURE - SOMETHING USEFUL, FREELY SHARED
@@ -120,6 +155,8 @@ The 6-Step Method: Check Yourself -> Pause -> Observe -> Fact vs. Story -> Get C
 The 7-Day Clarity Challenge with tracker and reflection.
 The Everyday Support Pack: conversation starters, appreciation cards, restart worksheet,
 phone wallpapers and pocket cards.
+The Perspective Starter Pack: seven free PDFs for communication, empathy,
+perspective shifting, understanding assumptions, and an emotional reset.
 
 These approved share-edition resources are free to save, print, use, and pass along.
 No signup, purchase, reply, affiliate enrollment, social post, or promotion is required.
@@ -150,5 +187,5 @@ with ZipFile(out,"w",ZIP_DEFLATED,compresslevel=6) as z:
         z.writestr(entry["path"],data)
 with ZipFile(out) as z:
     assert z.testzip() is None
-    assert len(z.namelist())==23
-print("Created",out.name,"containing 23 verified entries",out.stat().st_size,"bytes")
+    assert len(z.namelist())==30
+print("Created",out.name,"containing 30 verified entries",out.stat().st_size,"bytes")
