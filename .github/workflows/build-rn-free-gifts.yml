@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/build-rn-free-gifts.yml"
+      - "scripts/build_public_rn_gifts.py"
   workflow_dispatch:
 
 permissions:
@@ -21,7 +22,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create free-gifts-2026-10-19 RN_Complete_Free_Gift_Collection.zip \
-            --title "Relentless Nature - Free Gift Collection (October 2026)" \
-            --notes "Approved free-to-share educational gifts. No signup or purchase required. Includes the six-step method, the 7-Day Clarity Challenge, and all four Everyday Support Pack gifts." \
-            --latest=false
+          if gh release view free-gifts-2026-10-19 >/dev/null 2>&1; then
+            gh release upload free-gifts-2026-10-19 RN_Complete_Free_Gift_Collection.zip --clobber
+          else
+            gh release create free-gifts-2026-10-19 RN_Complete_Free_Gift_Collection.zip \
+              --title "Relentless Nature - Free Gift Collection (October 2026)" \
+              --notes "Approved free-to-share educational gifts. No signup or purchase required. Includes the six-step method, the 7-Day Clarity Challenge, and all four Everyday Support Pack gifts." \
+              --latest=false
+          fi
