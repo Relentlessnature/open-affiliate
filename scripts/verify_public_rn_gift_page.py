@@ -65,7 +65,7 @@ with ZipFile(BytesIO(bundle_bytes)) as collection:
         if name.endswith(".png"):
             with Image.open(BytesIO(data)) as img: img.verify()
     candidates=[m.group(0) for m in pattern.finditer(safe_text)]
-    candidates=[x for x in candidates if not re.search(r"\\bA\\s+Small\\s+Place\\b", x, re.I)]
+    candidates=[x for x in candidates if not re.search(r"\bA\s+Small\s+Place\b", x, re.I)]
     assert not candidates, "Potential street address inside ZIP"
     assert "PAUSE" in safe_text.upper(), "Approved Pause step missing"
     print("COMPLETE ZIP PASS",json.dumps({"bytes":len(bundle_bytes),"entries":len(names),"pdfs":sum(n.endswith(".pdf") for n in names),"pngs":sum(n.endswith(".png") for n in names),"privacy_pattern":"pass","crc":"pass"}))
