@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/build-rn-free-gifts.yml"
-      - "scripts/build_public_rn_gifts.py"
+      - "scripts/add_gift_return_links.py"
   workflow_dispatch:
 
 permissions:
@@ -16,17 +16,28 @@ jobs:
     steps:
       - name: Checkout public affiliate repository
         uses: actions/checkout@v4
-      - name: Fetch and validate public RN gift files, create ZIP
-        run: python3 scripts/build_public_rn_gifts.py
-      - name: Publish stable public gift ZIP
+      - name: Install document processing dependencies
+        run: python3 -m pip install PyMuPDF==1.26.7 Pillow==12.3.0 qrcode==8.2
+      - name: Build and validate return-link editions
+        run: python3 scripts/add_gift_return_links.py
+      - name: Retain files and verification receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rn-free-gifts-return-links-2026-10-21
+          path: |
+            rn-gifts-return-links/assets/
+            rn-gifts-return-links/verification.json
+          if-no-files-found: error
+      - name: Publish the new gift edition, retaining original download URLs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view free-gifts-2026-10-19 >/dev/null 2>&1; then
-            gh release upload free-gifts-2026-10-19 RN_Complete_Free_Gift_Collection.zip --clobber
+          tag=free-gifts-return-links-2026-10-21
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" rn-gifts-return-links/assets/* rn-gifts-return-links/verification.json --clobber
           else
-            gh release create free-gifts-2026-10-19 RN_Complete_Free_Gift_Collection.zip \
-              --title "Relentless Nature - Free Gift Collection (October 2026)" \
-              --notes "Approved free-to-share educational gifts. No signup or purchase required. Includes the six-step method, the 7-Day Clarity Challenge, and all four Everyday Support Pack gifts." \
+            gh release create "$tag" rn-gifts-return-links/assets/* rn-gifts-return-links/verification.json \
+              --title "Relentless Nature - Free Gifts with Return Links" \
+              --notes "Approved free-to-share resources with optional return and email-update links. Includes all 29 original gifts, the complete ZIP, and a separate return-links page. No signup or purchase required. Earlier release links remain available." \
               --latest=false
           fi
