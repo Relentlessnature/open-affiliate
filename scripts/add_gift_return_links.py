@@ -1,19 +1,11 @@
-"""Publishable, non-destructive return-link editions of the approved public gifts.
-
-Original downloads remain untouched. All inputs are public RN resources. No
-subscriber data, credentials, paid-library files, or private addresses are used.
+"""Non-destructive return-link editions of approved public RN gifts.
+Original downloads, content, cut-out dimensions and access permissions remain.
+No subscriber data, credentials, paid assets or private addresses are used.
 """
 from __future__ import annotations
-
-import ast
-import hashlib
-import io
-import json
+import ast, hashlib, io, json, time, urllib.request
 from pathlib import Path
-import time
-import urllib.request
 from zipfile import ZipFile, ZIP_DEFLATED
-
 import pymupdf as fitz
 from PIL import Image, ImageDraw, ImageFont
 import qrcode
@@ -25,19 +17,16 @@ COMPANION = "RN_More_Free_Resources_and_Optional_Updates.pdf"
 COMPANION_URL = "https://relentless-nature.com/wp-content/uploads/2026/10/" + COMPANION
 COMPANION_SHA = "99f53e20edf33478d028f3c964f3a9721eb2a21c27ab290e1b71394780e4dcbd"
 ROOT = Path("rn-gifts-return-links")
-CACHE = ROOT / "originals"
-ASSETS = ROOT / "assets"
+CACHE, ASSETS = ROOT / "originals", ROOT / "assets"
 RELEASE_TAG = "free-gifts-return-links-2026-10-21"
 RELEASE_BASE = "https://github.com/Relentlessnature/open-affiliate/releases/download/" + RELEASE_TAG + "/"
 INK = (55 / 255, 32 / 255, 82 / 255)
 
-
-def sha(data: bytes) -> str:
+def sha(data):
     return hashlib.sha256(data).hexdigest()
 
-
-def original_manifest() -> tuple[list[dict], str]:
-    # Read data without executing the original script or rebuilding its release.
+def original_manifest():
+    # Read data only; never execute the previous release-building script.
     tree = ast.parse(Path("scripts/build_public_rn_gifts.py").read_text())
     values = {}
     for node in tree.body:
@@ -48,8 +37,7 @@ def original_manifest() -> tuple[list[dict], str]:
     assert len(values["MANIFEST"]) == 29
     return values["MANIFEST"], values["README"]
 
-
-def fetch(url: str, path: Path, expected_size: int | None = None) -> bytes:
+def fetch(url, path, expected_size=None):
     if path.exists():
         data = path.read_bytes()
     else:
@@ -71,8 +59,7 @@ def fetch(url: str, path: Path, expected_size: int | None = None) -> bytes:
         raise ValueError("Invalid source: " + path.name)
     return data
 
-
-def qr_png(url: str = GIFT) -> bytes:
+def qr_png(url=GIFT):
     code = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=4, box_size=8)
     code.add_data(url)
     code.make(fit=True)
@@ -81,17 +68,13 @@ def qr_png(url: str = GIFT) -> bytes:
     image.save(stream, "PNG")
     return stream.getvalue()
 
-
 QR = qr_png()
-
 
 def add_link(page, rect, uri):
     page.insert_link({"kind": fitz.LINK_URI, "from": fitz.Rect(rect), "uri": uri})
 
-
 def small_footer(page):
-    # This area is blank in the three inspected one-page originals. Keep the
-    # original footer, page dimensions, writing spaces and cut lines intact.
+    # Inspected blank footer area on the three one-page resources.
     page.insert_text((48, 720), "Find more free resources", fontname="hebo", fontsize=8.5, color=INK)
     page.insert_text((48, 734), "Optional email updates: " + VISIBLE, fontsize=8, color=INK)
     add_link(page, (46, 709, 260, 723), GIFT)
@@ -100,42 +83,31 @@ def small_footer(page):
     page.insert_image(rect, stream=QR)
     add_link(page, rect, GIFT)
 
-
 def cut_card_links(page, kind):
-    # Add links inside each cut-out rather than relying on a sheet footer.
+    # Each cut-out keeps its own URL and QR. Baselines are placed in inspected
+    # blank areas above the existing brand/art, never across borders or text.
     if kind == "pocket":
-        for y in (175, 328, 481):
-            for x in (45, 315):
-                rect = fitz.Rect(x + 202, y + 91, x + 244, y + 133)
-                page.insert_image(rect, stream=QR)
-                add_link(page, rect, GIFT)
-                text_rect = fitz.Rect(x + 10, y + 133, x + 193, y + 141)
-                result = page.insert_textbox(text_rect, VISIBLE, fontsize=5.5, color=INK, align=1)
-                assert result >= 0
-                add_link(page, text_rect, GIFT)
-    elif kind == "appreciation":
-        for y in (118, 338, 558):
-            for x in (81, 315):
-                rect = fitz.Rect(x + 164, y + 154, x + 206, y + 196)
-                page.insert_image(rect, stream=QR)
-                add_link(page, rect, GIFT)
-                text_rect = fitz.Rect(x + 12, y + 204, x + 204, y + 212)
-                result = page.insert_textbox(text_rect, VISIBLE, fontsize=5.2, color=INK, align=1)
-                assert result >= 0
-                add_link(page, text_rect, GIFT)
+        positions = [(x, y, x+202, y+91, x+244, y+133, x+10, y+103, 183, 6.5)
+                     for y in (175, 328, 481) for x in (45, 315)]
+    else:
+        positions = [(x, y, x+164, y+154, x+206, y+196, x+12, y+138, 192, 6.0)
+                     for y in (118, 338, 558) for x in (81, 315)]
+    for x, y, x0, y0, x1, y1, tx, baseline, span, size in positions:
+        rect = fitz.Rect(x0, y0, x1, y1)
+        page.insert_image(rect, stream=QR)
+        add_link(page, rect, GIFT)
+        width = fitz.get_text_length(VISIBLE, fontsize=size)
+        assert width < span
+        left = tx + (span-width)/2
+        page.insert_text((left, baseline), VISIBLE, fontsize=size, color=INK)
+        add_link(page, (left, baseline-size-2, left+width, baseline+2), GIFT)
 
-
-def update_pdf(source: Path, output: Path, companion: bytes) -> dict:
-    original = fitz.open(source)
-    document = fitz.open(source)
+def update_pdf(source, output, companion):
+    original, document = fitz.open(source), fitz.open(source)
     before = [p.get_text() for p in original]
     dimensions = [(p.rect.width, p.rect.height) for p in original]
     name = source.name
-    inline = name in {
-        "RN_When_You_Dont_Know_What_to_Say.pdf",
-        "RN_A_Small_Place_to_Begin_Again.pdf",
-        "RN_Pocket_Cards_Printable.pdf",
-    }
+    inline = name in {"RN_When_You_Dont_Know_What_to_Say.pdf", "RN_A_Small_Place_to_Begin_Again.pdf", "RN_Pocket_Cards_Printable.pdf"}
     if name == "RN_Pocket_Cards_Printable.pdf":
         cut_card_links(document[0], "pocket")
     if name == "RN_Appreciation_Cards_Printable.pdf":
@@ -146,21 +118,17 @@ def update_pdf(source: Path, output: Path, companion: bytes) -> dict:
     if inline:
         small_footer(document[0])
     else:
-        return_page = fitz.open(stream=companion, filetype="pdf")
-        document.insert_pdf(return_page)
-        return_page.close()
-    # Keep original metadata and useful text; no rasterizing or page shrinking.
+        with fitz.open(stream=companion, filetype="pdf") as return_page:
+            document.insert_pdf(return_page)
     document.save(output, garbage=3, deflate=True)
     document.close()
     check = fitz.open(output)
     assert len(check) == len(original) + (0 if inline else 1)
     for index, text in enumerate(before):
-        assert check[index].rect.width == dimensions[index][0]
-        assert check[index].rect.height == dimensions[index][1]
+        assert (check[index].rect.width, check[index].rect.height) == dimensions[index]
         assert text in check[index].get_text(), (name, index, "original text changed")
     uris = [link.get("uri") for p in check for link in p.get_links()]
     assert GIFT in uris and UPDATES in uris, name
-    # Render-preservation check for all untouched original pages.
     touched = {0} if inline or name == "RN_Appreciation_Cards_Printable.pdf" else set()
     if name == "RN_Everyday_Support_Pack_Printable.pdf":
         touched = {2, 4}
@@ -179,28 +147,23 @@ def update_pdf(source: Path, output: Path, companion: bytes) -> dict:
     original.close()
     return report
 
-
-def update_image(source: Path, output: Path) -> dict:
+def update_image(source, output):
     image = Image.open(source).convert("RGB")
-    old_size = image.size
-    name = source.name
+    old_size, name = image.size, source.name
     if "Cheat_Sheet" in name:
-        expanded = Image.new("RGB", (image.width, image.height + 190), "#fffdfa")
+        expanded = Image.new("RGB", (image.width, image.height+190), "#fffdfa")
         expanded.paste(image, (0, 0))
         image = expanded
     draw = ImageDraw.Draw(image)
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-
     def center(text, y, size, left=0, right=None):
         right = image.width if right is None else right
         font = ImageFont.truetype(font_path, size)
         bounds = draw.textbbox((0, 0), text, font=font)
-        draw.text((left + (right - left - (bounds[2] - bounds[0])) / 2, y), text, font=font, fill="#372052")
-
+        draw.text((left+(right-left-(bounds[2]-bounds[0]))/2, y), text, font=font, fill="#372052")
     def qr(x, y, size):
         code = Image.open(io.BytesIO(QR)).convert("RGB")
         image.paste(code.resize((size, size), Image.Resampling.NEAREST), (x, y))
-
     if "Wallpaper" in name:
         center("More free gifts + optional email updates", 2945, 24)
         center(VISIBLE, 2983, 28)
@@ -216,36 +179,33 @@ def update_image(source: Path, output: Path) -> dict:
         qr(1300, 1720, 132)
     elif "Cheat_Sheet" in name:
         top = old_size[1]
-        center("More free gifts + optional email updates", top + 40, 27, 30, image.width - 210)
-        center(VISIBLE, top + 90, 30, 30, image.width - 210)
-        qr(image.width - 184, top + 20, 148)
+        center("More free gifts + optional email updates", top+40, 27, 30, image.width-210)
+        center(VISIBLE, top+90, 30, 30, image.width-210)
+        qr(image.width-184, top+20, 148)
     else:
         raise ValueError("Unrecognized image layout: " + name)
     if "Cheat_Sheet" not in name:
         assert image.size == old_size, name
     image.save(output, "PNG", optimize=True)
     return {"original_dimensions": old_size, "updated_dimensions": image.size,
-            "qr_included": "Wallpaper" not in name,
-            "original_artwork_preserved": True}
-
+            "qr_included": "Wallpaper" not in name, "original_artwork_preserved": True}
 
 def main():
     CACHE.mkdir(parents=True, exist_ok=True)
     ASSETS.mkdir(parents=True, exist_ok=True)
     manifest, readme = original_manifest()
-    companion = fetch(COMPANION_URL, CACHE / COMPANION)
+    companion = fetch(COMPANION_URL, CACHE/COMPANION)
     assert sha(companion) == COMPANION_SHA, "Return-page source changed"
-    (ASSETS / COMPANION).write_bytes(companion)
+    (ASSETS/COMPANION).write_bytes(companion)
     results = []
     for entry in manifest:
         name = entry["url"].rsplit("/", 1)[-1]
-        source = CACHE / name
+        source, output = CACHE/name, ASSETS/name
         original_bytes = fetch(entry["url"], source, entry.get("size"))
-        output = ASSETS / name
         details = update_pdf(source, output, companion) if name.endswith(".pdf") else update_image(source, output)
         results.append({"source_url": entry["url"], "filename": name, "bundle_path": entry["path"],
                         "source_sha256": sha(original_bytes), "sha256": sha(output.read_bytes()),
-                        "url": RELEASE_BASE + name, "bytes": output.stat().st_size, **details})
+                        "url": RELEASE_BASE+name, "bytes": output.stat().st_size, **details})
         print("Validated", name, flush=True)
     notes = """\nRETURN-LINK EDITION - OCTOBER 21, 2026
 Find more free resources: https://relentless-nature.com/free-gifts/
@@ -260,12 +220,12 @@ Print only the resource pages you need. Cut-out card sizes are unchanged.
 Phone wallpaper dimensions are unchanged. The quick-reference image has an
 added return-link footer beneath the original artwork.
 """
-    bundle = ASSETS / "RN_Complete_Free_Gift_Collection.zip"
+    bundle = ASSETS/"RN_Complete_Free_Gift_Collection.zip"
     with ZipFile(bundle, "w", ZIP_DEFLATED, compresslevel=6) as archive:
-        archive.writestr("README_FIRST.txt", readme + notes)
+        archive.writestr("README_FIRST.txt", readme+notes)
         archive.writestr("More_Free_Resources_and_Optional_Updates.pdf", companion)
         for item in results:
-            archive.write(ASSETS / item["filename"], item["bundle_path"])
+            archive.write(ASSETS/item["filename"], item["bundle_path"])
     with ZipFile(bundle) as archive:
         assert archive.testzip() is None and len(archive.namelist()) == 31
         for item in results:
@@ -274,10 +234,9 @@ added return-link footer beneath the original artwork.
               "pdf_count": sum(x["filename"].endswith(".pdf") for x in results),
               "png_count": sum(x["filename"].endswith(".png") for x in results),
               "bundle_entries": 31, "bundle_sha256": sha(bundle.read_bytes()),
-              "bundle_url": RELEASE_BASE + bundle.name, "assets": results}
-    (ROOT / "verification.json").write_text(json.dumps(report, indent=2))
-    print(json.dumps({k: v for k, v in report.items() if k != "assets"}, indent=2))
-
+              "bundle_url": RELEASE_BASE+bundle.name, "assets": results}
+    (ROOT/"verification.json").write_text(json.dumps(report, indent=2))
+    print(json.dumps({k:v for k,v in report.items() if k != "assets"}, indent=2))
 
 if __name__ == "__main__":
     main()
