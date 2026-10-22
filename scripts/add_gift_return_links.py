@@ -26,7 +26,6 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 def original_manifest():
-    # Read data only; never execute the previous release-building script.
     tree = ast.parse(Path("scripts/build_public_rn_gifts.py").read_text())
     values = {}
     for node in tree.body:
@@ -74,18 +73,17 @@ def add_link(page, rect, uri):
     page.insert_link({"kind": fitz.LINK_URI, "from": fitz.Rect(rect), "uri": uri})
 
 def small_footer(page):
-    # Inspected blank footer area on the three one-page resources.
-    page.insert_text((48, 720), "Find more free resources", fontname="hebo", fontsize=8.5, color=INK)
-    page.insert_text((48, 734), "Optional email updates: " + VISIBLE, fontsize=8, color=INK)
-    add_link(page, (46, 709, 260, 723), GIFT)
-    add_link(page, (46, 724, 440, 737), UPDATES)
-    rect = fitz.Rect(506, 678, 560, 732)
+    # A single readable row stays above the original gold rule at y=732.
+    page.insert_text((48, 723), "More free gifts: " + VISIBLE, fontsize=8, color=INK)
+    page.insert_text((300, 723), "Email updates (optional)", fontsize=8, color=INK)
+    add_link(page, (46, 712, 222, 727), GIFT)
+    add_link(page, (298, 712, 392, 727), UPDATES)
+    rect = fitz.Rect(506, 676, 560, 730)
     page.insert_image(rect, stream=QR)
     add_link(page, rect, GIFT)
 
 def cut_card_links(page, kind):
-    # Each cut-out keeps its own URL and QR. Baselines are placed in inspected
-    # blank areas above the existing brand/art, never across borders or text.
+    # Each cut-out keeps its own URL and QR in inspected blank areas.
     if kind == "pocket":
         positions = [(x, y, x+202, y+91, x+244, y+133, x+10, y+103, 183, 6.5)
                      for y in (175, 328, 481) for x in (45, 315)]
